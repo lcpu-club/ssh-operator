@@ -1,0 +1,9 @@
+apiVersion: ssh-operator.lcpu.dev/v1alpha1
+kind: SSHKeyPair
+metadata:
+  labels:
+    app.kubernetes.io/name: ssh-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: sshkeypair-sample
+spec:
+  # TODO(user): Add fields here

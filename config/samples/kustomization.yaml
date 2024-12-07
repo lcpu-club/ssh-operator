@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+  - ssh-operator_v1alpha1_sshauthorizedkey.yaml
+  - ssh-operator_v1alpha1_sshkeypair.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
