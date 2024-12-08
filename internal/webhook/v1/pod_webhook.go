@@ -93,6 +93,12 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		return nil
 	}
 
+	for _, volume := range pod.Spec.Volumes {
+		if volume.Name == "dot-ssh" {
+			return nil
+		}
+	}
+
 	// Get ssh key pairs & authorized keys
 	kpList := &sshoperatorv1alpha1.SSHKeyPairList{}
 	if err := d.c.List(ctx, kpList, client.InNamespace(ns)); err != nil {
@@ -157,7 +163,7 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 			{
 				Name:      "dot-ssh",
 				MountPath: "/mnt/.ssh",
-				ReadOnly:  true,
+				ReadOnly:  false,
 			},
 		},
 	})
@@ -165,7 +171,7 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		pod.Spec.Containers[k].VolumeMounts = append(pod.Spec.Containers[k].VolumeMounts, corev1.VolumeMount{
 			Name:      "dot-ssh",
 			MountPath: "/root/.ssh",
-			ReadOnly:  true,
+			ReadOnly:  false,
 		})
 	}
 	if pod.Spec.Hostname == "" {
@@ -181,6 +187,7 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		"/bin/bash",
 		"-c",
 		"chmod -R 0600 /root/.ssh; mkdir -p /run/sshd; /sbin/sshd; \"$@\"",
+		"--",
 	}, origCmd...)
 
 	return nil

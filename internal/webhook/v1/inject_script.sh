@@ -1,5 +1,6 @@
 echo "Inserting authorized_keys...";
-echo "$AUTHORIZED_KEYS" > /mnt/.ssh/authorized_keys;
+echo "$AUTHORIZED_KEYS" >> /mnt/.ssh/authorized_keys;
+echo "StrictHostKeyChecking no" >> /mnt/.ssh/config;
 
 for name in $SSH_KEY_PAIRS; do
     echo "Inserting key $name...";
