@@ -16,16 +16,6 @@ rules:
   - ssh-operator.lcpu.dev
   resources:
   - sshauthorizedkeys
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-- apiGroups:
-  - ssh-operator.lcpu.dev
-  resources:
   - sshkeypairs
   verbs:
   - create

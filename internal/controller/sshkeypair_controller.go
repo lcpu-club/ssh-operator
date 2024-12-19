@@ -40,7 +40,7 @@ const finalizerName = "ssh-operator.kube.lcpu.dev/sshkeypair-finalizer"
 // +kubebuilder:rbac:groups=ssh-operator.lcpu.dev,resources=sshkeypairs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ssh-operator.lcpu.dev,resources=sshkeypairs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ssh-operator.lcpu.dev,resources=sshkeypairs/finalizers,verbs=update
-// +kubebuilder:rbac:groups=ssh-operator.lcpu.dev,resources=sshauthorizedkeys,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups=ssh-operator.lcpu.dev,resources=sshauthorizedkeys,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,8 +57,11 @@ func (r *SSHKeyPairReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// TODO(user): your logic here
 	keyPair := &sshoperatorv1alpha1.SSHKeyPair{}
 	if err := r.Get(ctx, req.NamespacedName, keyPair); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		log.Error(err, "unable to fetch SSHKeyPair")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	notFound := false
@@ -80,7 +83,7 @@ func (r *SSHKeyPairReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if !utils.ContainsString(keyPair.GetFinalizers(), finalizerName) {
 			keyPair.SetFinalizers(append(keyPair.GetFinalizers(), finalizerName))
 			if err := r.Update(ctx, keyPair); err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, nil
 			}
 		}
 	} else {
@@ -93,9 +96,11 @@ func (r *SSHKeyPairReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return ctrl.Result{}, err
 			}
 		}
+		return ctrl.Result{}, nil
 	}
 
-	if notFound {
+	// To fix Precondition failed error
+	if notFound || (authorizedKey.ObjectMeta.UID == "" && authorizedKey.ObjectMeta.Name != "") {
 		if err := r.Create(ctx, authorizedKey); client.IgnoreAlreadyExists(err) != nil {
 			log.Error(err, "unable to create SSHAuthorizedKey")
 			return ctrl.Result{}, err
@@ -117,6 +122,6 @@ func (r *SSHKeyPairReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// For().
 		Named("sshkeypair").
 		For(&sshoperatorv1alpha1.SSHKeyPair{}).
-		Owns(&sshoperatorv1alpha1.SSHAuthorizedKey{}).
+		// Owns(&sshoperatorv1alpha1.SSHAuthorizedKey{}).
 		Complete(r)
 }

@@ -93,6 +93,21 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		return nil
 	}
 
+	// ssh-operator.lcpu.dev/inject-path is used to specify the path to inject the .ssh directory
+	// Default: /root
+	// Required: false
+	injectPath := "/root"
+	if path, ok := pod.ObjectMeta.Annotations["ssh-operator.lcpu.dev/inject-path"]; ok {
+		injectPath = path
+	}
+	// ssh-operator.lcpu.dev/modify-command is used to specify whether to modify the command
+	// Default: true
+	// Required: false
+	modifyCommand := true
+	if cmd, ok := pod.ObjectMeta.Annotations["ssh-operator.lcpu.dev/modify-command"]; ok {
+		modifyCommand = (cmd == "true") || (cmd == "yes") || (cmd == "on") || (cmd == "enabled")
+	}
+
 	for _, volume := range pod.Spec.Volumes {
 		if volume.Name == "dot-ssh" {
 			return nil
@@ -132,6 +147,9 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		})
 	}
 
+	if pod.ObjectMeta.Annotations == nil {
+		pod.ObjectMeta.Annotations = make(map[string]string)
+	}
 	pod.ObjectMeta.Annotations["ssh-operator.lcpu.dev/authorized_keys"] = akString
 	pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
 		Name: "dot-ssh",
@@ -170,7 +188,7 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 	for k := range pod.Spec.Containers {
 		pod.Spec.Containers[k].VolumeMounts = append(pod.Spec.Containers[k].VolumeMounts, corev1.VolumeMount{
 			Name:      "dot-ssh",
-			MountPath: "/root/.ssh",
+			MountPath: fmt.Sprintf("%s/.ssh", injectPath),
 			ReadOnly:  false,
 		})
 	}
@@ -182,13 +200,16 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		return nil
 	}
 
-	origCmd := pod.Spec.Containers[0].Command
-	pod.Spec.Containers[0].Command = append([]string{
-		"/bin/bash",
-		"-c",
-		"chmod -R 0600 /root/.ssh; mkdir -p /run/sshd; /sbin/sshd; \"$@\"",
-		"--",
-	}, origCmd...)
+	if modifyCommand {
+		origCmd := pod.Spec.Containers[0].Command
+		pod.Spec.Containers[0].Command = append([]string{
+			"/bin/bash",
+			"-c",
+			// Use exec to replace the shell process with the user's command
+			fmt.Sprintf("chmod -R 0600 %s/.ssh; mkdir -p /run/sshd; /sbin/sshd; exec \"$@\"", injectPath),
+			"--",
+		}, origCmd...)
+	}
 
 	return nil
 }

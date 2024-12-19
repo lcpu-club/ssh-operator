@@ -37,6 +37,7 @@ import (
 
 	sshoperatorv1alpha1 "github.com/lcpu-club/ssh-operator/api/v1alpha1"
 	"github.com/lcpu-club/ssh-operator/internal/controller"
+	webhookbatchv1 "github.com/lcpu-club/ssh-operator/internal/webhook/v1"
 	webhookcorev1 "github.com/lcpu-club/ssh-operator/internal/webhook/v1"
 	webhooksshoperatorv1alpha1 "github.com/lcpu-club/ssh-operator/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -162,6 +163,13 @@ func main() {
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = webhookcorev1.SetupPodWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Pod")
+			os.Exit(1)
+		}
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = webhookbatchv1.SetupJobWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Job")
 			os.Exit(1)
 		}
 	}

@@ -37,4 +37,12 @@ resources:
   webhooks:
     defaulting: true
     webhookVersion: v1
+- core: true
+  group: batch
+  kind: Job
+  path: k8s.io/api/batch/v1
+  version: v1
+  webhooks:
+    defaulting: true
+    webhookVersion: v1
 version: "3"
