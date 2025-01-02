@@ -1,0 +1,683 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+    control-plane: controller-manager
+  name: ssh-operator-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: sshauthorizedkeys.ssh-operator.lcpu.dev
+spec:
+  group: ssh-operator.lcpu.dev
+  names:
+    kind: SSHAuthorizedKey
+    listKind: SSHAuthorizedKeyList
+    plural: sshauthorizedkeys
+    singular: sshauthorizedkey
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SSHAuthorizedKey is the Schema for the sshauthorizedkeys API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SSHAuthorizedKeySpec defines the desired state of SSHAuthorizedKey.
+            properties:
+              key:
+                description: Key is the SSH public key to be authorized
+                type: string
+            required:
+            - key
+            type: object
+          status:
+            description: SSHAuthorizedKeyStatus defines the observed state of SSHAuthorizedKey.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: sshkeypairs.ssh-operator.lcpu.dev
+spec:
+  group: ssh-operator.lcpu.dev
+  names:
+    kind: SSHKeyPair
+    listKind: SSHKeyPairList
+    plural: sshkeypairs
+    singular: sshkeypair
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SSHKeyPair is the Schema for the sshkeypairs API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SSHKeyPairSpec defines the desired state of SSHKeyPair.
+            properties:
+              name:
+                description: |-
+                  Name describes the stored file name of the SSH keys;
+                  for example, if the name is `my-key`, the public key
+                  will be stored in `my-key.pub` and the private key
+                  will be stored in `my-key`.
+                type: string
+              privateKey:
+                type: string
+              publicKey:
+                type: string
+              type:
+                type: string
+            type: object
+          status:
+            description: SSHKeyPairStatus defines the observed state of SSHKeyPair.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-controller-manager
+  namespace: ssh-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-leader-election-role
+  namespace: ssh-operator-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ssh-operator-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshauthorizedkeys
+  - sshkeypairs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ssh-operator-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ssh-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshauthorizedkey-editor-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshauthorizedkeys
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshauthorizedkeys/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshauthorizedkey-viewer-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshauthorizedkeys
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshauthorizedkeys/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshkeypair-editor-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshkeypair-viewer-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshkeypairgeneration-editor-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairgenerations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairgenerations/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-sshkeypairgeneration-viewer-role
+rules:
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairgenerations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ssh-operator.lcpu.dev
+  resources:
+  - sshkeypairgenerations/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-leader-election-rolebinding
+  namespace: ssh-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ssh-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: ssh-operator-controller-manager
+  namespace: ssh-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ssh-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: ssh-operator-controller-manager
+  namespace: ssh-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ssh-operator-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ssh-operator-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: ssh-operator-controller-manager
+  namespace: ssh-operator-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+    control-plane: controller-manager
+  name: ssh-operator-controller-manager-metrics-service
+  namespace: ssh-operator-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-webhook-service
+  namespace: ssh-operator-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+    control-plane: controller-manager
+  name: ssh-operator-controller-manager
+  namespace: ssh-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        command:
+        - /manager
+        image: crmirror.lcpu.dev/xtlsoft/ssh-operator:v0.1.0
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: ssh-operator-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: ssh-operator
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: ssh-operator
+  name: ssh-operator-serving-cert
+  namespace: ssh-operator-system
+spec:
+  dnsNames:
+  - ssh-operator-webhook-service.ssh-operator-system.svc
+  - ssh-operator-webhook-service.ssh-operator-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: ssh-operator-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ssh-operator
+  name: ssh-operator-selfsigned-issuer
+  namespace: ssh-operator-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: ssh-operator-system/ssh-operator-serving-cert
+  name: ssh-operator-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: ssh-operator-webhook-service
+      namespace: ssh-operator-system
+      path: /mutate-batch-v1-job
+  failurePolicy: Fail
+  name: mjob-v1.kb.io
+  namespaceSelector:
+    matchExpressions:
+    - key: ssh-operator.lcpu.dev/inject
+      operator: In
+      values:
+      - enabled
+      - conditional
+  rules:
+  - apiGroups:
+    - batch
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - jobs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: ssh-operator-webhook-service
+      namespace: ssh-operator-system
+      path: /mutate--v1-pod
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: mpod-v1.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: ssh-operator-webhook-service
+      namespace: ssh-operator-system
+      path: /mutate-ssh-operator-lcpu-dev-v1alpha1-sshkeypair
+  failurePolicy: Fail
+  name: msshkeypair-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - ssh-operator.lcpu.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sshkeypairs
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: ssh-operator-system/ssh-operator-serving-cert
+  name: ssh-operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: ssh-operator-webhook-service
+      namespace: ssh-operator-system
+      path: /validate-ssh-operator-lcpu-dev-v1alpha1-sshkeypair
+  failurePolicy: Fail
+  name: vsshkeypair-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - ssh-operator.lcpu.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - sshkeypairs
+  sideEffects: None

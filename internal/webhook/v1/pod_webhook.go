@@ -108,6 +108,7 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 		modifyCommand = (cmd == "true") || (cmd == "yes") || (cmd == "on") || (cmd == "enabled")
 	}
 
+	// Avoid re-injecting the .ssh directory
 	for _, volume := range pod.Spec.Volumes {
 		if volume.Name == "dot-ssh" {
 			return nil
@@ -206,7 +207,8 @@ func (d *PodCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 			"/bin/bash",
 			"-c",
 			// Use exec to replace the shell process with the user's command
-			fmt.Sprintf("chmod -R 0600 %s/.ssh; mkdir -p /run/sshd; /sbin/sshd; exec \"$@\"", injectPath),
+			// Accept any environment variables from the client
+			fmt.Sprintf("chmod -R 0600 %s/.ssh; mkdir -p /run/sshd; /sbin/sshd -o \"AcceptEnv=*\"; exec \"$@\"", injectPath),
 			"--",
 		}, origCmd...)
 	}

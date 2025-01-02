@@ -1,0 +1,117 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: sshauthorizedkeys.ssh-operator.lcpu.dev
+spec:
+  group: ssh-operator.lcpu.dev
+  names:
+    kind: SSHAuthorizedKey
+    listKind: SSHAuthorizedKeyList
+    plural: sshauthorizedkeys
+    singular: sshauthorizedkey
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SSHAuthorizedKey is the Schema for the sshauthorizedkeys API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SSHAuthorizedKeySpec defines the desired state of SSHAuthorizedKey.
+            properties:
+              key:
+                description: Key is the SSH public key to be authorized
+                type: string
+            required:
+            - key
+            type: object
+          status:
+            description: SSHAuthorizedKeyStatus defines the observed state of SSHAuthorizedKey.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: sshkeypairs.ssh-operator.lcpu.dev
+spec:
+  group: ssh-operator.lcpu.dev
+  names:
+    kind: SSHKeyPair
+    listKind: SSHKeyPairList
+    plural: sshkeypairs
+    singular: sshkeypair
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SSHKeyPair is the Schema for the sshkeypairs API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SSHKeyPairSpec defines the desired state of SSHKeyPair.
+            properties:
+              name:
+                description: |-
+                  Name describes the stored file name of the SSH keys;
+                  for example, if the name is `my-key`, the public key
+                  will be stored in `my-key.pub` and the private key
+                  will be stored in `my-key`.
+                type: string
+              privateKey:
+                type: string
+              publicKey:
+                type: string
+              type:
+                type: string
+            type: object
+          status:
+            description: SSHKeyPairStatus defines the observed state of SSHKeyPair.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

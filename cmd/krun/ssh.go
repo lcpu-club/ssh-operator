@@ -13,7 +13,7 @@ type SSHRunner struct {
 }
 
 func (s *SSHRunner) Command(addr string, command []string) *exec.Cmd {
-	cmd := exec.Command("ssh", append([]string{"-o", "StrictHostKeyChecking=no", addr}, command...)...)
+	cmd := exec.Command("ssh", append([]string{"-o", "StrictHostKeyChecking=no", "-o", "SendEnv=*", addr}, command...)...)
 	return cmd
 }
 

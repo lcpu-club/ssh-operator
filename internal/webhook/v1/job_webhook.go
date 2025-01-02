@@ -68,6 +68,11 @@ func (d *JobCustomDefaulter) Default(ctx context.Context, obj runtime.Object) er
 	// TODO: More robust logic
 	if *job.Spec.CompletionMode == batchv1.IndexedCompletion {
 		for i := range job.Spec.Template.Spec.Containers {
+			for j := range job.Spec.Template.Spec.Containers[i].Env {
+				if job.Spec.Template.Spec.Containers[i].Env[j].Name == "KRUN_WAIT_MIN" {
+					return nil
+				}
+			}
 			job.Spec.Template.Spec.Containers[i].Env = append(
 				job.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 					Name:  "KRUN_WAIT_MIN",
